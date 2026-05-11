@@ -1,22 +1,20 @@
 #!/usr/bin/env bash
-# scan.sh — enumerate skill files, extract frontmatter and UTC mtime
-# Usage: scan.sh [CWD_SKILLS_DIR]
+# scan-skills.sh — enumerate skill files, extract frontmatter and UTC mtime
+# Usage: scan-skills.sh [CWD_SKILLS_DIR]
 # Output: JSON to stdout
 #
 # When CWD_SKILLS_DIR is omitted, defaults to $PWD/.claude/skills so the
 # script always picks up project-level skills without relying on the caller.
 #
 # Environment:
-#   SKILL_STOCKTAKE_GLOBAL_DIR   Override ~/.claude/skills (for testing only;
-#                                do not set in production — intended for bats tests)
-#   SKILL_STOCKTAKE_PROJECT_DIR  Override project dir detection (for testing only)
+#   RULES_DISTILL_GLOBAL_DIR   Override ~/.claude/skills (for testing only;
+#                              do not set in production — intended for bats tests)
+#   RULES_DISTILL_PROJECT_DIR  Override project dir detection (for testing only)
 
 set -euo pipefail
 
-GLOBAL_DIR="${SKILL_STOCKTAKE_GLOBAL_DIR:-$HOME/.claude/skills}"
-CWD_SKILLS_DIR="${SKILL_STOCKTAKE_PROJECT_DIR:-${1:-$PWD/.claude/skills}}"
-OBSERVATIONS="$HOME/.claude/homunculus/observations.jsonl"
-
+GLOBAL_DIR="${RULES_DISTILL_GLOBAL_DIR:-$HOME/.claude/skills}"
+CWD_SKILLS_DIR="${RULES_DISTILL_PROJECT_DIR:-${1:-$PWD/.claude/skills}}"
 # Validate CWD_SKILLS_DIR looks like a .claude/skills path (defense-in-depth).
 # Only warn when the path exists — a nonexistent path poses no traversal risk.
 if [[ -n "$CWD_SKILLS_DIR" && -d "$CWD_SKILLS_DIR" && "$CWD_SKILLS_DIR" != */.claude/skills* ]]; then
@@ -44,66 +42,22 @@ extract_field() {
   ' "$file"
 }
 
-# Get UTC timestamp N days ago (supports both macOS and GNU date)
-date_ago() {
-  local n="$1"
-  date -u -v-"${n}d" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null ||
-  date -u -d "${n} days ago" +%Y-%m-%dT%H:%M:%SZ
-}
-
-# Count observations matching a file path since a cutoff timestamp
-count_obs() {
-  local file="$1" cutoff="$2"
-  if [[ ! -f "$OBSERVATIONS" ]]; then
-    echo 0
-    return
-  fi
-  jq -r --arg p "$file" --arg c "$cutoff" \
-    'select(.tool=="Read" and .path==$p and .timestamp>=$c) | 1' \
-    "$OBSERVATIONS" 2>/dev/null | wc -l | tr -d ' '
-}
-
 # Scan a directory and produce a JSON array of skill objects
 scan_dir_to_json() {
   local dir="$1"
-  local c7 c30
-  c7=$(date_ago 7)
-  c30=$(date_ago 30)
 
   local tmpdir
   tmpdir=$(mktemp -d)
-  # Use a function to avoid embedding $tmpdir in a quoted string (prevents injection
-  # if TMPDIR were crafted to contain shell metacharacters).
   local _scan_tmpdir="$tmpdir"
   _scan_cleanup() { rm -rf "$_scan_tmpdir"; }
   trap _scan_cleanup RETURN
 
-  # Pre-aggregate observation counts in two passes (one per window) instead of
-  # calling jq per-file — reduces from O(n*m) to O(n+m) jq invocations.
-  local obs_7d_counts obs_30d_counts
-  obs_7d_counts=""
-  obs_30d_counts=""
-  if [[ -f "$OBSERVATIONS" ]]; then
-    obs_7d_counts=$(jq -r --arg c "$c7" \
-      'select(.tool=="Read" and .timestamp>=$c) | .path' \
-      "$OBSERVATIONS" 2>/dev/null | sort | uniq -c)
-    obs_30d_counts=$(jq -r --arg c "$c30" \
-      'select(.tool=="Read" and .timestamp>=$c) | .path' \
-      "$OBSERVATIONS" 2>/dev/null | sort | uniq -c)
-  fi
-
   local i=0
   while IFS= read -r file; do
-    local name desc mtime u7 u30 dp
+    local name desc mtime dp
     name=$(extract_field "$file" "name")
     desc=$(extract_field "$file" "description")
     mtime=$(date -u -r "$file" +%Y-%m-%dT%H:%M:%SZ)
-    # Use awk exact field match to avoid substring false-positives from grep -F.
-    # uniq -c output format: "   N /path/to/file" — path is always field 2.
-    u7=$(echo "$obs_7d_counts" | awk -v f="$file" '$2 == f {print $1}' | head -1)
-    u7="${u7:-0}"
-    u30=$(echo "$obs_30d_counts" | awk -v f="$file" '$2 == f {print $1}' | head -1)
-    u30="${u30:-0}"
     dp="${file/#$HOME/~}"
 
     jq -n \
@@ -111,9 +65,7 @@ scan_dir_to_json() {
       --arg name "$name" \
       --arg description "$desc" \
       --arg mtime "$mtime" \
-      --argjson use_7d "$u7" \
-      --argjson use_30d "$u30" \
-      '{path:$path,name:$name,description:$description,use_7d:$use_7d,use_30d:$use_30d,mtime:$mtime}' \
+      '{path:$path,name:$name,description:$description,mtime:$mtime}' \
       > "$tmpdir/$i.json"
     i=$((i+1))
   done < <(find "$dir" -name "*.md" -type f 2>/dev/null | sort)

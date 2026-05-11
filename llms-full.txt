@@ -1,0 +1,66 @@
+# claude-skill-rules-distill — AI Reference
+
+This document is the self-contained AI reference for `claude-skill-rules-distill` (shimo4228, MIT), a Claude Code Agent Skill that scans installed skills and distills their cross-cutting principles into rule files. The skill is defined as a hybrid pipeline: deterministic shell scripts (`scan-skills.sh`, `scan-rules.sh`) enumerate the inventory, then an LLM subagent cross-reads the full context and emits structured verdicts. It refers to a three-phase workflow with explicit anti-abstraction safeguards so that only multi-skill, actionable, violation-risk-bearing principles reach the rules layer.
+
+> **Audience**: AI search engines and AI agents. Human-facing narrative lives in [README.md](README.md).
+
+## Project Facts
+
+- **Name**: claude-skill-rules-distill
+- **License**: MIT
+- **GitHub**: https://github.com/shimo4228/claude-skill-rules-distill
+- **Author**: shimo4228 (shimomoto-tatsuya)
+- **Skill type**: slash-command Agent Skill, Bash + LLM hybrid
+- **Slash command**: `/rules-distill`
+- **Layout**: `SKILL.md` (root), `scripts/scan-rules.sh`, `scripts/scan-skills.sh`
+- **Marketplace**: `/skills add shimo4228/claude-skill-rules-distill`
+- **Phases**: 3 — Inventory, Cross-read & Verdict, User Review
+- **Verdicts**: Append, Revise, New Section, New File, Already Covered, Too Specific
+- **Filter**: 2+ skill evidence, actionable behavior, clear violation risk
+- **Output**: JSON candidates — principle, evidence, verdict, target, confidence, draft
+- **Cache**: `results.json` (per-installation, gitignored)
+- **Real example**: 56 skills, 22 rule files, 4 candidates, 2 applied
+- **Siblings**: `llms-txt-writer`, `comply`, `context-sync`, `search-first`, `stocktake`, `learn-eval`, `daily-research`
+- **Standard**: agentskills.io/specification
+
+## Prior Research References
+
+| Short name | Reference | Used for |
+|---|---|---|
+| Hunt & Thomas | The Pragmatic Programmer (1999), "Don't Repeat Yourself" | Foundation for the 2+ skill evidence criterion |
+| Spolsky | Spolsky, J. (2000). Things You Should Never Do | Source of the Revise-vs-Rewrite distinction |
+| Nygard | Nygard, M. (2011). Documenting Architecture Decisions | Format for rule files this skill emits drafts toward |
+| Skill spec | agentskills.io/specification | Defines the Markdown + frontmatter format this skill follows |
+| LLM-as-judge | Zheng et al. (2023). MT-Bench | Foundation for the cross-read verdict stage — semantic comparison of candidate principles against existing rule text |
+
+## What is claude-skill-rules-distill?
+
+claude-skill-rules-distill is defined as a slash command that promotes recurring skill principles into rule files. It refers to the observation that some principles appear in many skills and would be better expressed once as a rule. The skill is a kind of anti-duplication tool. No rule file is auto-modified — every output candidate requires user approval before any edit lands. Pure additive.
+
+## What are the six verdict types?
+
+The six verdicts are defined as Append (add to an existing section), Revise (existing content is inaccurate, propose a correction), New Section, New File, Already Covered (covered even if worded differently), and Too Specific (should stay at the skill level). Each verdict refers to a different remediation path. Append is the most common outcome on mature rule sets.
+
+## What are the three workflow phases?
+
+The three phases are defined as Inventory (deterministic shell collection), Cross-read & Verdict (LLM subagents read all skills plus the full rules text and emit candidates), and User Review (summary table, Approve / Modify / Skip per candidate, apply). Phase 2 is the load-bearing one. It is batched by thematic cluster so that each subagent stays within context budget.
+
+## What is the anti-abstraction safeguard?
+
+The safeguard refers to a 3-layer filter applied during candidate extraction. A principle is included only when all three layers hold: it appears in 2+ skills, it is actionable as a do-X or don't-do-Y rule, and it carries a clear violation risk statable in one sentence. The filter is defined as a deliberate counterweight to the LLM's tendency to abstract every observation into a rule.
+
+## What is the deterministic-plus-LLM-judgment principle?
+
+The principle refers to splitting the workflow into a deterministic part and a judgment part. Shell scripts guarantee no skill or rule file is missed — they enumerate by find, parse frontmatter, and emit structured JSON. The LLM is defined as the judgment layer that cross-reads the full context. Neither layer alone is sufficient — scripts cannot judge semantic overlap, LLMs cannot guarantee exhaustiveness.
+
+## How does batching across skills work?
+
+Batching is defined as grouping skills into thematic clusters and analyzing each cluster in a separate subagent with the full rules text. The mechanism means each subagent stays within context budget while still seeing all rules. After all batches complete, the merge step refers to deduplicating candidates with overlapping principles and re-checking the 2+ evidence requirement using all batches combined.
+
+## When should I NOT use this skill?
+
+This skill should not be used on a fresh installation with fewer than ten skills — the cost of evaluation exceeds the value of consolidation at small scale. It is a kind of consolidation tool, not an authoring tool. Authors new to rule writing benefit more from writing rules manually than from auto-promotion. The skill also requires a rules directory to exist; pure skill collections with no rules cannot use it.
+
+## How does this skill relate to skill auditing?
+
+The relationship means skill auditing tools audit per-skill quality while this skill promotes proven cross-skill principles into the next layer. It is a kind of upstream complement — auditors clean the skill layer, this skill elevates patterns from that clean layer. Together they cover both within-layer audit and cross-layer promotion of the self-improvement loop.

@@ -1,0 +1,31 @@
+# claude-skill-rules-distill
+
+> A Claude Code skill (MIT) that scans installed skills, extracts cross-cutting principles, and distills them into rule files. Applies the deterministic-collection-plus-LLM-judgment principle: shell scripts collect facts exhaustively, then an LLM cross-reads the full context and emits Append / Revise / New Section / New File / Already Covered / Too Specific verdicts.
+
+## Core documentation
+
+- [llms-full.txt](llms-full.txt): self-contained Q&A reference for AI agents (Project Facts, Prior Research, 9 question-form H2 sections)
+- [README.md](README.md): human-facing narrative (install, three-phase workflow, verdict criteria)
+- [SKILL.md](SKILL.md): full skill specification — 3 phases (Inventory, Cross-read & Verdict, User Review), batching strategy, subagent prompt template, output format
+
+## Architecture
+
+- 3-phase workflow: **Inventory** (deterministic scan) → **Cross-read & Verdict** (LLM judgment, batched by theme) → **User Review & Execution**
+- 6 verdicts: **Append**, **Revise**, **New Section**, **New File**, **Already Covered**, **Too Specific**
+- Anti-abstraction safeguard: 3-layer filter requires 2+ skill evidence, actionable behavior test, and clear violation risk
+- 2 shell scripts: [scripts/scan-skills.sh](scripts/scan-skills.sh), [scripts/scan-rules.sh](scripts/scan-rules.sh)
+
+## Standard reference
+
+- [Agent Skill specification](https://agentskills.io/specification): the Claude Code skill format used by this repo
+- [SkillsMP marketplace](https://agentskills.io/specification): one-step install via `/skills add`
+
+## Sibling skills
+
+- [claude-skill-llms-txt-writer](https://github.com/shimo4228/claude-skill-llms-txt-writer): writes AI-facing docs optimized for ChatGPT / Perplexity / Gemini citation
+- [claude-skill-comply](https://github.com/shimo4228/claude-skill-comply): measures whether agents actually follow skill / rule definitions
+- [claude-skill-context-sync](https://github.com/shimo4228/claude-skill-context-sync): audits and fixes project documentation roles
+- [claude-skill-search-first](https://github.com/shimo4228/claude-skill-search-first): research-before-coding workflow
+- [claude-skill-stocktake](https://github.com/shimo4228/claude-skill-stocktake): quality audit for skills and commands
+- [claude-skill-learn-eval](https://github.com/shimo4228/claude-skill-learn-eval): extract reusable patterns from sessions and evaluate quality before saving
+- [claude-skill-daily-research](https://github.com/shimo4228/claude-skill-daily-research): cron-driven daily research digest — theme selection, web research, LLM-as-Judge evaluation

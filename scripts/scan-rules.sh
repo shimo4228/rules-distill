@@ -16,14 +16,6 @@ if [[ ! -d "$RULES_DIR" ]]; then
 fi
 
 # Collect all .md files (excluding _archived/)
-mapfile_compat() {
-  local -n arr="$1"
-  arr=()
-  while IFS= read -r line; do
-    arr+=("$line")
-  done
-}
-
 files=()
 while IFS= read -r -d '' f; do
   files+=("$f")
@@ -31,42 +23,36 @@ done < <(find "$RULES_DIR" -name '*.md' -not -path '*/_archived/*' -print0 | sor
 
 total=${#files[@]}
 
-# Build JSON output
-echo '{'
-echo '  "rules_dir": "'"$RULES_DIR"'",'
-echo '  "total": '"$total"','
-echo '  "rules": ['
+tmpdir=$(mktemp -d)
+_rules_cleanup() { rm -rf "$tmpdir"; }
+trap _rules_cleanup EXIT
 
 for i in "${!files[@]}"; do
   file="${files[$i]}"
   rel_path="${file#"$HOME"/}"
   rel_path="~/$rel_path"
 
-  # Extract H2 headings (## Title)
-  headings=""
-  while IFS= read -r heading; do
-    heading="${heading#\#\# }"
-    if [[ -n "$headings" ]]; then
-      headings="$headings, "
-    fi
-    headings="$headings\"$heading\""
-  done < <(grep -E '^## ' "$file" 2>/dev/null || true)
+  # Extract H2 headings (## Title) into a JSON array via jq
+  headings_json=$(grep -E '^## ' "$file" 2>/dev/null | sed 's/^## //' | jq -R . | jq -s '.')
 
   # Get line count
   line_count=$(wc -l < "$file" | tr -d ' ')
 
-  comma=""
-  if [[ $i -lt $((total - 1)) ]]; then
-    comma=","
-  fi
-
-  echo '    {'
-  echo '      "path": "'"$rel_path"'",'
-  echo '      "file": "'"$(basename "$file")"'",'
-  echo '      "lines": '"$line_count"','
-  echo '      "headings": ['"$headings"']'
-  echo "    }$comma"
+  jq -n \
+    --arg path "$rel_path" \
+    --arg file "$(basename "$file")" \
+    --argjson lines "$line_count" \
+    --argjson headings "$headings_json" \
+    '{path:$path,file:$file,lines:$lines,headings:$headings}' \
+    > "$tmpdir/$i.json"
 done
 
-echo '  ]'
-echo '}'
+if [[ ${#files[@]} -eq 0 ]]; then
+  jq -n --arg dir "$RULES_DIR" '{rules_dir:$dir,total:0,rules:[]}'
+else
+  jq -n \
+    --arg dir "$RULES_DIR" \
+    --argjson total "$total" \
+    --argjson rules "$(jq -s '.' "$tmpdir"/*.json)" \
+    '{rules_dir:$dir,total:$total,rules:$rules}'
+fi
