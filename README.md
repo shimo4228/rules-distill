@@ -82,17 +82,24 @@ Skills scanned: 56 | Rules: 22 files | Candidates: 4
 
 ## Related Skills
 
-| Skill | Role in Knowledge Lifecycle |
-|-------|-----------------------------|
-| [search-first](https://github.com/shimo4228/claude-skill-search-first) | Research before coding |
-| [skill-stocktake](https://github.com/shimo4228/claude-skill-stocktake) | Quality audit of skills |
-| [learn-eval](https://github.com/shimo4228/claude-skill-learn-eval) | Quality-gated knowledge extraction |
-| **rules-distill** | Principle promotion from skills to rules |
+All six AKC phases as standalone Claude Code skills:
+
+| Skill | AKC Phase | Role |
+|-------|-----------|------|
+| [search-first](https://github.com/shimo4228/claude-skill-search-first) | Research | Find existing solutions before writing custom code |
+| [learn-eval](https://github.com/shimo4228/claude-skill-learn-eval) | Extract | Quality-gated extraction of session patterns into skills |
+| [skill-stocktake](https://github.com/shimo4228/claude-skill-stocktake) | Curate | Audit accumulated skills for quality and overlap |
+| **rules-distill** | **Promote** | **Distill cross-skill principles into rule files** |
+| [skill-comply](https://github.com/shimo4228/claude-skill-comply) | Measure | Test whether agents actually follow their skills and rules |
+| [context-sync](https://github.com/shimo4228/claude-skill-context-sync) | Maintain | Audit docs for role overlaps, stale content, and missing ADRs |
 
 Together, these form a complete self-improvement loop for AI agents:
 
 ```
-Experience (skills) → Extraction (learn-eval) → Curation (skill-stocktake) → Principle promotion (rules-distill) → Behavior change → New experience → ...
+Research → Extract → Curate → Promote → Measure → Maintain → (back to Research)
+   │          │         │         │          │          │
+search-    learn-     skill-    rules-     skill-     context-
+ first      eval     stocktake  distill    comply      sync
 ```
 
 ## Requirements
