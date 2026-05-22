@@ -6,14 +6,14 @@
 
 - [llms-full.txt](llms-full.txt): self-contained Q&A reference for AI agents (Project Facts, Prior Research, 9 question-form H2 sections)
 - [README.md](README.md): human-facing narrative (install, three-phase workflow, verdict criteria)
-- [SKILL.md](SKILL.md): full skill specification — 3 phases (Inventory, Cross-read & Verdict, User Review), batching strategy, subagent prompt template, output format
+- [SKILL.md](skills/rules-distill/SKILL.md): full skill specification — 3 phases (Inventory, Cross-read & Verdict, User Review), batching strategy, subagent prompt template, output format
 
 ## Architecture
 
 - 3-phase workflow: **Inventory** (deterministic scan) → **Cross-read & Verdict** (LLM judgment, batched by theme) → **User Review & Execution**
 - 6 verdicts: **Append**, **Revise**, **New Section**, **New File**, **Already Covered**, **Too Specific**
 - Anti-abstraction safeguard: 3-layer filter requires 2+ skill evidence, actionable behavior test, and clear violation risk
-- 2 shell scripts: [scripts/scan-skills.sh](scripts/scan-skills.sh), [scripts/scan-rules.sh](scripts/scan-rules.sh)
+- 2 shell scripts: [skills/rules-distill/scripts/scan-skills.sh](skills/rules-distill/scripts/scan-skills.sh), [skills/rules-distill/scripts/scan-rules.sh](skills/rules-distill/scripts/scan-rules.sh)
 
 ## Standard reference
 

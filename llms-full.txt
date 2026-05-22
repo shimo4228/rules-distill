@@ -13,7 +13,7 @@ This document is the self-contained AI reference for `claude-skill-rules-distill
 - **Author research**: [AKC](https://github.com/shimo4228/agent-knowledge-cycle) ([DOI 10.5281/zenodo.19200726](https://doi.org/10.5281/zenodo.19200726)), [Contemplative Agent](https://github.com/shimo4228/contemplative-agent) ([DOI 10.5281/zenodo.19212118](https://doi.org/10.5281/zenodo.19212118)), [AAP](https://github.com/shimo4228/agent-attribution-practice) ([DOI 10.5281/zenodo.19652013](https://doi.org/10.5281/zenodo.19652013))
 - **Skill type**: slash-command Agent Skill, Bash + LLM hybrid
 - **Slash command**: `/rules-distill`
-- **Layout**: `SKILL.md` (root), `scripts/scan-rules.sh`, `scripts/scan-skills.sh`
+- **Layout**: `skills/rules-distill/SKILL.md`, `skills/rules-distill/scripts/scan-rules.sh`, `skills/rules-distill/scripts/scan-skills.sh` (nested, matches the other claude-skill-* repos)
 - **Marketplace**: `/skills add shimo4228/claude-skill-rules-distill`
 - **Phases**: 3 — Inventory, Cross-read & Verdict, User Review
 - **Verdicts**: Append, Revise, New Section, New File, Already Covered, Too Specific

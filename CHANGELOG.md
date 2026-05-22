@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Layout normalized to nested: `SKILL.md` and `scripts/` moved into `skills/rules-distill/` so the repo matches the other ten `claude-skill-*` repositories. Install instructions in `README.md`, `llms.txt` link targets, and the `llms-full.txt` Layout line updated accordingly. History preserved via `git mv`
+- Install instructions simplified: stale `commands/rules-distill.md` copy step removed (the skill is discovered via `SKILL.md` frontmatter `user-invocable: true`, not via a separate `commands/` file)
+
 ### Planned
 
 - Initial public release.

@@ -14,11 +14,11 @@ search-first → skill-stocktake → learn-eval → rules-distill
 ### Claude Code
 
 ```bash
-# Copy skill + scripts + command
-cp SKILL.md ~/.claude/skills/rules-distill/SKILL.md
-cp -r scripts/ ~/.claude/skills/rules-distill/scripts/
-cp commands/rules-distill.md ~/.claude/commands/rules-distill.md
+git clone https://github.com/shimo4228/claude-skill-rules-distill
+cp -r claude-skill-rules-distill/skills/rules-distill ~/.claude/skills/rules-distill
 ```
+
+The skill is invoked via `/rules-distill` slash command — runtime command discovery is driven by `SKILL.md` frontmatter (`user-invocable: true`), so no separate `commands/` copy is needed.
 
 ## How It Works
 
