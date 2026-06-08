@@ -36,8 +36,8 @@ The skill assumes Claude Code's `skills/` + `rules/` separation and works on Mar
 
 | Skill | Role | When |
 |---|---|---|
-| [`claude-skill-search-first`](https://github.com/shimo4228/claude-skill-search-first) | Research before coding | First phase of the lifecycle |
-| [`claude-skill-stocktake`](https://github.com/shimo4228/claude-skill-stocktake) | Quality audit of existing skills / commands | Second phase — what to keep / retire before distilling further |
-| [`claude-skill-learn-eval`](https://github.com/shimo4228/claude-skill-learn-eval) | Per-session pattern extraction with quality gate | Third phase — feeds candidate patterns into this skill |
+| [`search-first`](https://github.com/shimo4228/search-first) | Research before coding | First phase of the lifecycle |
+| [`skill-stocktake`](https://github.com/shimo4228/skill-stocktake) | Quality audit of existing skills / commands | Second phase — what to keep / retire before distilling further |
+| [`learn-eval`](https://github.com/shimo4228/learn-eval) | Per-session pattern extraction with quality gate | Third phase — feeds candidate patterns into this skill |
 
 This skill implements the **Promote** phase of the [Agent Knowledge Cycle (AKC)](https://github.com/shimo4228/agent-knowledge-cycle) — a Zenodo-citable six-phase bidirectional growth loop for sustaining intent alignment between an AI agent and its operator over time.

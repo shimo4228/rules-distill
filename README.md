@@ -1,4 +1,4 @@
-# claude-skill-rules-distill
+# rules-distill
 
 An [Agent Skill](https://agentskills.io/specification) that scans your installed skills, extracts cross-cutting principles appearing in multiple skills, and distills them into rules — appending to existing rule files, revising outdated content, or creating new ones.
 
@@ -14,8 +14,8 @@ search-first → skill-stocktake → learn-eval → rules-distill
 ### Claude Code
 
 ```bash
-git clone https://github.com/shimo4228/claude-skill-rules-distill
-cp -r claude-skill-rules-distill/skills/rules-distill ~/.claude/skills/rules-distill
+git clone https://github.com/shimo4228/rules-distill
+cp -r rules-distill/skills/rules-distill ~/.claude/skills/rules-distill
 ```
 
 The skill is invoked via `/rules-distill` slash command — runtime command discovery is driven by `SKILL.md` frontmatter (`user-invocable: true`), so no separate `commands/` copy is needed.
@@ -86,12 +86,12 @@ All six AKC phases as standalone Claude Code skills:
 
 | Skill | AKC Phase | Role |
 |-------|-----------|------|
-| [search-first](https://github.com/shimo4228/claude-skill-search-first) | Research | Find existing solutions before writing custom code |
-| [learn-eval](https://github.com/shimo4228/claude-skill-learn-eval) | Extract | Quality-gated extraction of session patterns into skills |
-| [skill-stocktake](https://github.com/shimo4228/claude-skill-stocktake) | Curate | Audit accumulated skills for quality and overlap |
+| [search-first](https://github.com/shimo4228/search-first) | Research | Find existing solutions before writing custom code |
+| [learn-eval](https://github.com/shimo4228/learn-eval) | Extract | Quality-gated extraction of session patterns into skills |
+| [skill-stocktake](https://github.com/shimo4228/skill-stocktake) | Curate | Audit accumulated skills for quality and overlap |
 | **rules-distill** | **Promote** | **Distill cross-skill principles into rule files** |
-| [skill-comply](https://github.com/shimo4228/claude-skill-comply) | Measure | Test whether agents actually follow their skills and rules |
-| [context-sync](https://github.com/shimo4228/claude-skill-context-sync) | Maintain | Audit docs for role overlaps, stale content, and missing ADRs |
+| [skill-comply](https://github.com/shimo4228/skill-comply) | Measure | Test whether agents actually follow their skills and rules |
+| [context-sync](https://github.com/shimo4228/context-sync) | Maintain | Audit docs for role overlaps, stale content, and missing ADRs |
 
 Together, these form a complete self-improvement loop for AI agents:
 

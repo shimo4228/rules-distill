@@ -1,20 +1,20 @@
-# claude-skill-rules-distill — AI Reference
+# rules-distill — AI Reference
 
-This document is the self-contained AI reference for `claude-skill-rules-distill` (shimo4228, MIT), a Claude Code Agent Skill that scans installed skills and distills their cross-cutting principles into rule files. The skill is defined as a hybrid pipeline: deterministic shell scripts (`scan-skills.sh`, `scan-rules.sh`) enumerate the inventory, then an LLM subagent cross-reads the full context and emits structured verdicts. It refers to a three-phase workflow with explicit anti-abstraction safeguards so that only multi-skill, actionable, violation-risk-bearing principles reach the rules layer.
+This document is the self-contained AI reference for `rules-distill` (shimo4228, MIT), a Claude Code Agent Skill that scans installed skills and distills their cross-cutting principles into rule files. The skill is defined as a hybrid pipeline: deterministic shell scripts (`scan-skills.sh`, `scan-rules.sh`) enumerate the inventory, then an LLM subagent cross-reads the full context and emits structured verdicts. It refers to a three-phase workflow with explicit anti-abstraction safeguards so that only multi-skill, actionable, violation-risk-bearing principles reach the rules layer.
 
 > **Audience**: AI search engines and AI agents. Human-facing narrative lives in [README.md](README.md).
 
 ## Project Facts
 
-- **Name**: claude-skill-rules-distill
+- **Name**: rules-distill
 - **License**: MIT
-- **GitHub**: https://github.com/shimo4228/claude-skill-rules-distill
+- **GitHub**: https://github.com/shimo4228/rules-distill
 - **Author**: shimo4228 (shimomoto-tatsuya)
 - **Author research**: [AKC](https://github.com/shimo4228/agent-knowledge-cycle) ([DOI 10.5281/zenodo.19200726](https://doi.org/10.5281/zenodo.19200726)), [Contemplative Agent](https://github.com/shimo4228/contemplative-agent) ([DOI 10.5281/zenodo.19212118](https://doi.org/10.5281/zenodo.19212118)), [AAP](https://github.com/shimo4228/agent-attribution-practice) ([DOI 10.5281/zenodo.19652013](https://doi.org/10.5281/zenodo.19652013))
 - **Skill type**: slash-command Agent Skill, Bash + LLM hybrid
 - **Slash command**: `/rules-distill`
 - **Layout**: `skills/rules-distill/SKILL.md`, `skills/rules-distill/scripts/scan-rules.sh`, `skills/rules-distill/scripts/scan-skills.sh` (nested, matches the other claude-skill-* repos)
-- **Marketplace**: `/skills add shimo4228/claude-skill-rules-distill`
+- **Marketplace**: `/skills add shimo4228/rules-distill`
 - **Phases**: 3 — Inventory, Cross-read & Verdict, User Review
 - **Verdicts**: Append, Revise, New Section, New File, Already Covered, Too Specific
 - **Filter**: 2+ skill evidence, actionable behavior, clear violation risk
@@ -34,9 +34,9 @@ This document is the self-contained AI reference for `claude-skill-rules-distill
 | Skill spec | agentskills.io/specification | Defines the Markdown + frontmatter format this skill follows |
 | LLM-as-judge | Zheng et al. (2023). MT-Bench | Foundation for the cross-read verdict stage — semantic comparison of candidate principles against existing rule text |
 
-## What is claude-skill-rules-distill?
+## What is rules-distill?
 
-claude-skill-rules-distill is defined as a slash command that promotes recurring skill principles into rule files. It refers to the observation that some principles appear in many skills and would be better expressed once as a rule. The skill is a kind of anti-duplication tool. No rule file is auto-modified — every output candidate requires user approval before any edit lands. Pure additive.
+rules-distill is defined as a slash command that promotes recurring skill principles into rule files. It refers to the observation that some principles appear in many skills and would be better expressed once as a rule. The skill is a kind of anti-duplication tool. No rule file is auto-modified — every output candidate requires user approval before any edit lands. Pure additive.
 
 ## What are the six verdict types?
 
