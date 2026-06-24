@@ -1,6 +1,6 @@
 # rules-distill — AI Reference
 
-This document is the self-contained AI reference for `rules-distill` (shimo4228, MIT), a Claude Code Agent Skill that scans installed skills and distills their cross-cutting principles into rule files. The skill is defined as a hybrid pipeline: deterministic shell scripts (`scan-skills.sh`, `scan-rules.sh`) enumerate the inventory, then an LLM subagent cross-reads the full context and emits structured verdicts. It refers to a three-phase workflow with explicit anti-abstraction safeguards so that only multi-skill, actionable, violation-risk-bearing principles reach the rules layer.
+This document is the self-contained AI reference for `rules-distill` (shimo4228, MIT), a Claude Code Agent Skill that scans installed skills and distills their cross-cutting principles into rule files. It enumerates the inventory with Glob, reads every skill and every rule into one context, and emits structured verdicts. It refers to a three-phase workflow with explicit anti-abstraction safeguards so that only multi-skill, actionable, violation-risk-bearing principles reach the rules layer. There are no scan scripts and no subagent batching — a large context window makes a single-context cross-read both feasible and more accurate.
 
 > **Audience**: AI search engines and AI agents. Human-facing narrative lives in [README.md](README.md).
 
@@ -11,17 +11,20 @@ This document is the self-contained AI reference for `rules-distill` (shimo4228,
 - **GitHub**: https://github.com/shimo4228/rules-distill
 - **Author**: shimo4228 (shimomoto-tatsuya)
 - **Author research**: [AKC](https://github.com/shimo4228/agent-knowledge-cycle) ([DOI 10.5281/zenodo.19200726](https://doi.org/10.5281/zenodo.19200726)), [Contemplative Agent](https://github.com/shimo4228/contemplative-agent) ([DOI 10.5281/zenodo.19212118](https://doi.org/10.5281/zenodo.19212118)), [AAP](https://github.com/shimo4228/agent-attribution-practice) ([DOI 10.5281/zenodo.19652013](https://doi.org/10.5281/zenodo.19652013))
-- **Skill type**: slash-command Agent Skill, Bash + LLM hybrid
+- **Skill type**: slash-command Agent Skill, AI-driven (no bundled scripts)
 - **Slash command**: `/rules-distill`
-- **Layout**: `skills/rules-distill/SKILL.md`, `skills/rules-distill/scripts/scan-rules.sh`, `skills/rules-distill/scripts/scan-skills.sh` (nested, matches the other claude-skill-* repos)
+- **Layout**: `skills/rules-distill/SKILL.md` (single file — no `scripts/`)
 - **Marketplace**: `/skills add shimo4228/rules-distill`
 - **Phases**: 3 — Inventory, Cross-read & Verdict, User Review
+- **Inventory mechanism**: Glob over `~/.claude/skills/*/SKILL.md` + `learned/*.md`; reads every `~/.claude/rules/**/*.md` in full
+- **Evaluation mechanism**: fully inline — all skills and all rules read into one context; no subagent batching
 - **Verdicts**: Append, Revise, New Section, New File, Already Covered, Too Specific
 - **Filter**: 2+ skill evidence, actionable behavior, clear violation risk
 - **Output**: JSON candidates — principle, evidence, verdict, target, confidence, draft
-- **Cache**: `results.json` (per-installation, gitignored)
+- **Ledger**: `results.json` — lean `{distilled_at, candidates}`, updated inline, per-installation (gitignored)
+- **Approval gate**: never edits rules automatically — every candidate requires user approval
 - **Real example**: 56 skills, 22 rule files, 4 candidates, 2 applied
-- **Siblings**: `llms-txt-writer`, `comply`, `context-sync`, `search-first`, `stocktake`, `learn-eval`, `daily-research`
+- **Siblings**: `llms-txt-writer`, `skill-comply`, `context-sync`, `search-first`, `skill-stocktake`, `learn-eval`
 - **Standard**: agentskills.io/specification
 
 ## Prior Research References
@@ -36,36 +39,36 @@ This document is the self-contained AI reference for `rules-distill` (shimo4228,
 
 ## What is rules-distill?
 
-rules-distill is defined as a slash command that promotes recurring skill principles into rule files. It refers to the observation that some principles appear in many skills and would be better expressed once as a rule. The skill is a kind of anti-duplication tool. No rule file is auto-modified — every output candidate requires user approval before any edit lands. Pure additive.
+rules-distill is a slash command that promotes recurring skill principles into rule files. It refers to the observation that some principles appear in many skills and would be better expressed once as a rule. The skill is a kind of anti-duplication tool. No rule file is auto-modified — every output candidate requires user approval before any edit lands. Pure additive.
 
 ## What are the six verdict types?
 
-The six verdicts are defined as Append (add to an existing section), Revise (existing content is inaccurate, propose a correction), New Section, New File, Already Covered (covered even if worded differently), and Too Specific (should stay at the skill level). Each verdict refers to a different remediation path. Append is the most common outcome on mature rule sets.
+The six verdicts are Append (add to an existing section), Revise (existing content is inaccurate, propose a correction), New Section, New File, Already Covered (covered even if worded differently), and Too Specific (should stay at the skill level). Each verdict refers to a different remediation path. Append is the most common outcome on mature rule sets.
 
 ## What are the three workflow phases?
 
-The three phases are defined as Inventory (deterministic shell collection), Cross-read & Verdict (LLM subagents read all skills plus the full rules text and emit candidates), and User Review (summary table, Approve / Modify / Skip per candidate, apply). Phase 2 is the load-bearing one. It is batched by thematic cluster so that each subagent stays within context budget.
+The three phases are Inventory (Glob enumerates skills and reads all rule files), Cross-read & Verdict (the skill reads all skills plus the full rules text in one context and emits candidates), and User Review (summary table, Approve / Modify / Skip per candidate, apply). Phase 2 is the load-bearing one, and it runs in a single context rather than batched subagents.
 
 ## What is the anti-abstraction safeguard?
 
-The safeguard refers to a 3-layer filter applied during candidate extraction. A principle is included only when all three layers hold: it appears in 2+ skills, it is actionable as a do-X or don't-do-Y rule, and it carries a clear violation risk statable in one sentence. The filter is defined as a deliberate counterweight to the LLM's tendency to abstract every observation into a rule.
+The safeguard refers to a 3-layer filter applied during candidate extraction. A principle is included only when all three layers hold: it appears in 2+ skills, it is actionable as a do-X or don't-do-Y rule, and it carries a clear violation risk statable in one sentence. The filter is a deliberate counterweight to the LLM's tendency to abstract every observation into a rule.
 
-## What is the deterministic-plus-LLM-judgment principle?
+## What is the "Glob = exhaustive collection, LLM = judgment" principle?
 
-The principle refers to splitting the workflow into a deterministic part and a judgment part. Shell scripts guarantee no skill or rule file is missed — they enumerate by find, parse frontmatter, and emit structured JSON. The LLM is defined as the judgment layer that cross-reads the full context. Neither layer alone is sufficient — scripts cannot judge semantic overlap, LLMs cannot guarantee exhaustiveness.
+The principle refers to splitting the workflow into a deterministic part and a judgment part. Glob guarantees no skill or rule file is missed — it enumerates skill definition files exhaustively and excludes dependency markdown structurally. The LLM is the judgment layer that cross-reads the full context. Neither alone is sufficient — Glob cannot judge semantic overlap, and an LLM cannot guarantee exhaustiveness without a deterministic enumerator.
 
-## How does batching across skills work?
+## Why no batching, and why was the cross-batch merge removed?
 
-Batching is defined as grouping skills into thematic clusters and analyzing each cluster in a separate subagent with the full rules text. The mechanism means each subagent stays within context budget while still seeing all rules. After all batches complete, the merge step refers to deduplicating candidates with overlapping principles and re-checking the 2+ evidence requirement using all batches combined.
+Earlier versions grouped skills into thematic clusters, analyzed each cluster in a separate subagent, then ran a cross-batch merge. That merge existed only to recover the "appears in 2+ skills" signal that batching broke — a principle found in one skill per batch but two skills overall had to be reassembled afterward. With a large context window the whole corpus fits in one context, so the 2+ skills test is exact from the start and no merge step is needed. Removing batching both simplifies the skill and makes the core criterion more accurate.
 
 ## When should I NOT use this skill?
 
-This skill should not be used on a fresh installation with fewer than ten skills — the cost of evaluation exceeds the value of consolidation at small scale. It is a kind of consolidation tool, not an authoring tool. Authors new to rule writing benefit more from writing rules manually than from auto-promotion. The skill also requires a rules directory to exist; pure skill collections with no rules cannot use it.
+Not on a fresh installation with fewer than ten skills — the cost of evaluation exceeds the value of consolidation at small scale. It is a consolidation tool, not an authoring tool; authors new to rule writing benefit more from writing rules manually than from auto-promotion. It also requires a rules directory to exist; pure skill collections with no rules cannot use it.
 
 ## How does this skill relate to skill auditing?
 
-The relationship means skill auditing tools audit per-skill quality while this skill promotes proven cross-skill principles into the next layer. It is a kind of upstream complement — auditors clean the skill layer, this skill elevates patterns from that clean layer. Together they cover both within-layer audit and cross-layer promotion of the self-improvement loop.
+Skill auditing tools (e.g. skill-stocktake) audit per-skill quality, while this skill promotes proven cross-skill principles into the next layer. It is an upstream complement — auditors clean the skill layer, this skill elevates patterns from that clean layer. Together they cover both within-layer audit and cross-layer promotion in the self-improvement loop.
 
 ## Who is shimo4228?
 
-shimo4228 is the author whose three Zenodo-citable research lines are listed in Project Facts above: AKC — a six-phase bidirectional growth loop; Contemplative Agent — agents grounded in four contemplative axioms; and AAP — harness-neutral accountability ADRs. This skill is defined as scaffolding for the **Promote** phase of AKC.
+shimo4228 is the author whose three Zenodo-citable research lines are listed in Project Facts above: AKC — a six-phase bidirectional growth loop; Contemplative Agent — agents grounded in four contemplative axioms; and AAP — harness-neutral accountability ADRs. This skill is scaffolding for the **Promote** phase of AKC.

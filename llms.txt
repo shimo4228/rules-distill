@@ -1,19 +1,21 @@
 # rules-distill
 
-> A Claude Code skill (MIT) that scans installed skills, extracts cross-cutting principles, and distills them into rule files. Applies the deterministic-collection-plus-LLM-judgment principle: shell scripts collect facts exhaustively, then an LLM cross-reads the full context and emits Append / Revise / New Section / New File / Already Covered / Too Specific verdicts.
+> A Claude Code skill (MIT) that scans installed skills, extracts cross-cutting principles appearing in 2+ skills, and distills them into rule files. It reads every skill and every rule into one context and emits Append / Revise / New Section / New File / Already Covered / Too Specific verdicts. No scan scripts and no subagent batching — it relies on a large context window, which makes the "appears in 2+ skills" test exact.
 
 ## Core documentation
 
-- [llms-full.txt](llms-full.txt): self-contained Q&A reference for AI agents (Project Facts, Prior Research, 9 question-form H2 sections)
+- [llms-full.txt](llms-full.txt): self-contained Q&A reference for AI agents (Project Facts, Prior Research, question-form H2 sections)
 - [README.md](README.md): human-facing narrative (install, three-phase workflow, verdict criteria)
-- [SKILL.md](skills/rules-distill/SKILL.md): full skill specification — 3 phases (Inventory, Cross-read & Verdict, User Review), batching strategy, subagent prompt template, output format
+- [SKILL.md](skills/rules-distill/SKILL.md): full skill specification — 3 phases (Inventory, Cross-read & Verdict, User Review), extraction criteria, verdict taxonomy, ledger format
 
 ## Architecture
 
-- 3-phase workflow: **Inventory** (deterministic scan) → **Cross-read & Verdict** (LLM judgment, batched by theme) → **User Review & Execution**
+- 3-phase workflow: **Inventory** (Glob enumeration) → **Cross-read & Verdict** (holistic single-context judgment) → **User Review & Execution**
 - 6 verdicts: **Append**, **Revise**, **New Section**, **New File**, **Already Covered**, **Too Specific**
-- Anti-abstraction safeguard: 3-layer filter requires 2+ skill evidence, actionable behavior test, and clear violation risk
-- 2 shell scripts: [skills/rules-distill/scripts/scan-skills.sh](skills/rules-distill/scripts/scan-skills.sh), [skills/rules-distill/scripts/scan-rules.sh](skills/rules-distill/scripts/scan-rules.sh)
+- Anti-abstraction safeguard: 3-layer filter requires 2+ skill evidence, an actionable-behavior test, and a clear violation risk
+- Inventory via Glob (`~/.claude/skills/*/SKILL.md` + `learned/*.md`); `.venv` / `.pytest_cache` excluded structurally because Glob targets only skill files
+- Fully inline holistic cross-read — every skill and rule in one context; no scan scripts and no subagent batching (the old cross-batch merge existed only to recover the 2+ skills signal that batching broke)
+- Lean ledger: `~/.claude/skills/rules-distill/results.json` (`{distilled_at, candidates}`), updated inline; never edits rules without user approval
 
 ## Standard reference
 
@@ -26,6 +28,5 @@
 - [skill-comply](https://github.com/shimo4228/skill-comply): measures whether agents actually follow skill / rule definitions
 - [context-sync](https://github.com/shimo4228/context-sync): audits and fixes project documentation roles
 - [search-first](https://github.com/shimo4228/search-first): research-before-coding workflow
-- [skill-stocktake](https://github.com/shimo4228/skill-stocktake): quality audit for skills and commands
+- [skill-stocktake](https://github.com/shimo4228/skill-stocktake): quality audit for installed skills
 - [learn-eval](https://github.com/shimo4228/learn-eval): extract reusable patterns from sessions and evaluate quality before saving
-- [daily-research](https://github.com/shimo4228/daily-research): cron-driven daily research digest — theme selection, web research, LLM-as-Judge evaluation

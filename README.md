@@ -1,6 +1,6 @@
 # rules-distill
 
-An [Agent Skill](https://agentskills.io/specification) that scans your installed skills, extracts cross-cutting principles appearing in multiple skills, and distills them into rules — appending to existing rule files, revising outdated content, or creating new ones.
+An [Agent Skill](https://agentskills.io/specification) that scans your installed skills, extracts cross-cutting principles appearing in **2+ skills**, and distills them into rules — appending to existing rule files, revising outdated content, or creating new ones.
 
 The final piece of the knowledge lifecycle:
 
@@ -18,22 +18,19 @@ git clone https://github.com/shimo4228/rules-distill
 cp -r rules-distill/skills/rules-distill ~/.claude/skills/rules-distill
 ```
 
-The skill is invoked via `/rules-distill` slash command — runtime command discovery is driven by `SKILL.md` frontmatter (`user-invocable: true`), so no separate `commands/` copy is needed.
+Invoked via the `/rules-distill` slash command — discovery is driven by `SKILL.md` frontmatter (`user-invocable: true`), so no separate `commands/` copy is needed.
 
 ## How It Works
 
-### Phase 1: Inventory (Deterministic Collection)
+No scan scripts and no subagent batching — with a large context window the skill reads every skill and every rule into one context. That single-context view is what makes the "appears in 2+ skills" test exact (the old version needed a cross-batch merge step purely to recover that signal after batching broke it).
 
-Scripts enumerate all installed skills and rule files exhaustively:
+### Phase 1: Inventory (Glob, exhaustive)
 
-| Script | Purpose |
-|--------|---------|
-| `scripts/scan-skills.sh` | Enumerate skill files with frontmatter and usage stats |
-| `scripts/scan-rules.sh` | Enumerate rule files with H2 heading index |
+Glob enumerates skill definition files (`~/.claude/skills/*/SKILL.md` + `learned/*.md`) and reads every rule file in full. The rules corpus is small (~800 lines), so no grep pre-filter is needed. Dependency markdown under `.venv` / `.pytest_cache` is excluded structurally because Glob targets only skill files.
 
-### Phase 2: Cross-read, Match & Verdict (LLM Judgment)
+### Phase 2: Cross-read, Match & Verdict (holistic)
 
-A subagent cross-reads skills and full rules text in a single pass. No grep pre-filtering — rules are small enough (~800 lines) that the LLM reads everything for accurate semantic matching.
+The skill cross-reads all skills and the full rules text in a single inline pass.
 
 **Extraction criteria** (all must be true):
 1. Appears in 2+ skills
@@ -43,9 +40,7 @@ A subagent cross-reads skills and full rules text in a single pass. No grep pre-
 
 ### Phase 3: User Review & Execution
 
-Candidates are presented with verdicts. User approves, modifies, or skips each one.
-
-**Never modifies rules automatically.**
+Candidates are presented with verdicts. The user approves, modifies, or skips each one. **Never modifies rules automatically** — rules load every session, so a bad rule has outsized blast radius.
 
 ## Verdict Types
 
@@ -62,7 +57,7 @@ Candidates are presented with verdicts. User approves, modifies, or skips each o
 
 - **What, not How**: Extract principles (rules) only. Code examples stay in skills.
 - **Link back**: Drafts include `See skill: [name]` references.
-- **Deterministic collection, LLM judgment**: Scripts guarantee exhaustiveness; the LLM guarantees contextual understanding.
+- **Glob = exhaustive collection, LLM = judgment**: Glob guarantees the inventory is complete; the single-context cross-read guarantees contextual understanding.
 - **Anti-abstraction safeguard**: 3-layer filter (2+ skills, actionable behavior test, violation risk) prevents overly abstract principles from entering rules.
 
 ## Example Output
@@ -104,9 +99,8 @@ search-    learn-     skill-    rules-     skill-     context-
 
 ## Requirements
 
-- `jq` (JSON processing)
-- `bash` 4+ (macOS: uses `while IFS= read -r` for compatibility)
-- Claude Code with Agent tool support
+- Claude Code with the **Glob**, **Read**, and **Edit** tools (the analysis runs in one main context — no subagents required).
+- Optional: `jq` / `python3` for the inline ledger one-liner.
 
 ## About this skill
 

@@ -1,0 +1,5 @@
+results.json
+results.json.bak-*
+__pycache__/
+.venv/
+.pytest_cache/
