@@ -1,5 +1,7 @@
 # rules-distill
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shimo4228/rules-distill)
+
 An [Agent Skill](https://agentskills.io/specification) that scans your installed skills, extracts cross-cutting principles appearing in **2+ skills**, and distills them into rules — appending to existing rule files, revising outdated content, or creating new ones.
 
 The final piece of the knowledge lifecycle:
