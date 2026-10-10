@@ -1,32 +1,37 @@
 # rules-distill
 
-> A Claude Code skill (MIT) that scans installed skills, extracts cross-cutting principles appearing in 2+ skills, and distills them into rule files. It reads every skill and every rule into one context and emits Append / Revise / New Section / New File / Already Covered / Too Specific verdicts. No scan scripts and no subagent batching — it relies on a large context window, which makes the "appears in 2+ skills" test exact.
+> A Claude Code skill (MIT) that scans installed skills, finds principles that belong in the always-loaded rules layer (`~/.claude/rules/`), and drafts them as rule edits. A candidate must be environment-specific — a fact, a wiring or a trap of this machine, harness or accounts that the model would not handle by default; how many skills repeat it is reported as evidence, not a gate. It reads every skill and every rule into one context and emits Append / Revise / New Section / New File / Already Covered / Too Specific verdicts. No scan scripts and no subagent batching — it relies on a large context window, which makes the recurrence count exact and the "not already in rules" test reliable.
+
+Status: active, synced one way from the author's Claude Code harness by `scripts/sync-from-local.sh`, and also shipped in the [akc-cycle](https://github.com/shimo4228/akc-cycle) plugin (as `/akc-cycle:rules-distill`), so this repository can trail the plugin between syncs. Install: clone the repo and copy `skills/rules-distill` to `~/.claude/skills/rules-distill`; run it as `/rules-distill` (it sets `disable-model-invocation: true`).
 
 ## Core documentation
 
 - [llms-full.txt](llms-full.txt): self-contained Q&A reference for AI agents (Project Facts, Prior Research, question-form H2 sections)
 - [README.md](README.md): human-facing narrative (install, three-phase workflow, verdict criteria)
-- [SKILL.md](skills/rules-distill/SKILL.md): full skill specification — 3 phases (Inventory, Cross-read & Verdict, User Review), extraction criteria, verdict taxonomy, ledger format
+- [SKILL.md](skills/rules-distill/SKILL.md): full skill specification — 3 phases (Inventory, Cross-read & Verdict, User Review), candidate tests, verdict taxonomy, ledger format
 
 ## Architecture
 
-- 3-phase workflow: **Inventory** (Glob enumeration) → **Cross-read & Verdict** (holistic single-context judgment) → **User Review & Execution**
+- 3-phase workflow: **Inventory** (Glob enumeration) → **Cross-read & Verdict** (holistic single-context judgment) → **User Review & Execution** (one candidate at a time)
 - 6 verdicts: **Append**, **Revise**, **New Section**, **New File**, **Already Covered**, **Too Specific**
-- Anti-abstraction safeguard: 3-layer filter requires 2+ skill evidence, an actionable-behavior test, and a clear violation risk
-- Inventory via Glob (`~/.claude/skills/*/SKILL.md` + `learned/*.md`); `.venv` / `.pytest_cache` excluded structurally because Glob targets only skill files
-- Fully inline holistic cross-read — every skill and rule in one context; no scan scripts and no subagent batching (the old cross-batch merge existed only to recover the 2+ skills signal that batching broke)
-- Lean ledger: `~/.claude/skills/rules-distill/results.json` (`{distilled_at, candidates}`), updated inline; never edits rules without user approval
+- Six candidate tests: environment-specific, not already done by the model, not a procedure, an actionable behavior change, a one-sentence violation risk, and not already in rules; recurrence across skills is evidence only, so a one-off environment trap can pass with a recurrence of 1
+- Inventory via Glob (`~/.claude/skills/*/SKILL.md`) plus a full read of every `~/.claude/rules/**/*.md`; `.venv` / `.pytest_cache` excluded structurally because Glob targets only skill files
+- Fully inline holistic cross-read — every skill and rule in one context; no scan scripts and no subagent batching (the old cross-batch merge existed only to recover the recurrence signal that batching broke)
+- Confirm-each review: summary table, then `[y/n/skip]` per candidate; bulk approval is banned and rules are never edited without approval
+- Lean ledger: `~/.claude/skills/rules-distill/results.json` (`{distilled_at, candidates}`, each with principle, verdict, target, evidence, status applied / skipped), updated inline
 
 ## Standard reference
 
 - [Agent Skill specification](https://agentskills.io/specification): the Claude Code skill format used by this repo
-- [SkillsMP marketplace](https://agentskills.io/specification): one-step install via `/skills add`
 
 ## Sibling skills
 
-- [llms-txt-writer](https://github.com/shimo4228/llms-txt-writer): writes AI-facing docs optimized for ChatGPT / Perplexity / Gemini citation
+- [akc-cycle](https://github.com/shimo4228/akc-cycle): installs this skill together with the rest of the Agent Knowledge Cycle as one Claude Code plugin
+- [rules-stocktake](https://github.com/shimo4228/rules-stocktake): the reverse direction — audits always-loaded rules for what they cost in every session, with verdicts such as demote-to-skill or dissolve
+- [learn-eval](https://github.com/shimo4228/learn-eval): extract reusable patterns from sessions and save each where a future session will find it
+- [skill-stocktake](https://github.com/shimo4228/skill-stocktake): quality audit for installed skills
 - [skill-comply](https://github.com/shimo4228/skill-comply): measures whether agents actually follow skill / rule definitions
 - [context-sync](https://github.com/shimo4228/context-sync): audits and fixes project documentation roles
 - [search-first](https://github.com/shimo4228/search-first): research-before-coding workflow
-- [skill-stocktake](https://github.com/shimo4228/skill-stocktake): quality audit for installed skills
-- [learn-eval](https://github.com/shimo4228/learn-eval): extract reusable patterns from sessions and evaluate quality before saving
+- [llms-txt-writer](https://github.com/shimo4228/llms-txt-writer): writes AI-facing docs optimized for ChatGPT / Perplexity / Gemini citation
+- [shimo4228](https://github.com/shimo4228/shimo4228): the author's hub — the practice lines (AKC among them), their DOIs, and the tools
