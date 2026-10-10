@@ -1,6 +1,6 @@
 # rules-distill — AI Reference
 
-This document is the self-contained AI reference for `rules-distill` (shimo4228, MIT), a Claude Code Agent Skill that scans installed skills and distills their cross-cutting principles into rule files. It enumerates the inventory with Glob, reads every skill and every rule into one context, and emits structured verdicts. It refers to a three-phase workflow with explicit anti-abstraction safeguards so that only multi-skill, actionable, violation-risk-bearing principles reach the rules layer. There are no scan scripts and no subagent batching — a large context window makes a single-context cross-read both feasible and more accurate.
+This document is the self-contained AI reference for `rules-distill` (shimo4228, MIT), a Claude Code Agent Skill that scans installed skills and distills their cross-cutting principles into rule files. It enumerates the inventory with Glob, reads every skill and every rule into one context, and emits structured verdicts. It refers to a three-phase workflow with explicit safeguards so that only environment-specific, actionable, violation-risk-bearing principles that the model would not follow by default reach the rules layer. There are no scan scripts and no subagent batching — a large context window makes a single-context cross-read both feasible and more accurate.
 
 > **Audience**: AI search engines and AI agents. Human-facing narrative lives in [README.md](README.md).
 
@@ -11,27 +11,30 @@ This document is the self-contained AI reference for `rules-distill` (shimo4228,
 - **GitHub**: https://github.com/shimo4228/rules-distill
 - **Author**: shimo4228 (shimomoto-tatsuya)
 - **Author research**: [AKC](https://github.com/shimo4228/agent-knowledge-cycle) ([DOI 10.5281/zenodo.19200726](https://doi.org/10.5281/zenodo.19200726)), [Contemplative Agent](https://github.com/shimo4228/contemplative-agent) ([DOI 10.5281/zenodo.19212118](https://doi.org/10.5281/zenodo.19212118)), [AAP](https://github.com/shimo4228/agent-attribution-practice) ([DOI 10.5281/zenodo.19652013](https://doi.org/10.5281/zenodo.19652013))
-- **Skill type**: slash-command Agent Skill, AI-driven (no bundled scripts)
-- **Slash command**: `/rules-distill`
-- **Layout**: `skills/rules-distill/SKILL.md` (single file — no `scripts/`)
-- **Marketplace**: `/skills add shimo4228/rules-distill`
+- **Author hub**: https://github.com/shimo4228/shimo4228 (five practice lines and their DOIs)
+- **Status**: active, synced one way from the author's Claude Code harness by `scripts/sync-from-local.sh`; also shipped in the akc-cycle plugin, so this repository can trail the plugin between syncs
+- **Skill type**: slash-command Agent Skill, AI-driven (no scripts in the skill payload)
+- **Slash command**: `/rules-distill` (`disable-model-invocation: true` — runs only when called; `/akc-cycle:rules-distill` in the plugin)
+- **Install**: `git clone https://github.com/shimo4228/rules-distill` then `cp -r rules-distill/skills/rules-distill ~/.claude/skills/rules-distill`; or `/plugin marketplace add shimo4228/akc-cycle` + `/plugin install akc-cycle@akc-cycle`
+- **Requirements**: Claude Code with Glob, Read, Edit and Write, plus Bash for the ledger's `date -u` timestamp, and enough context to hold every skill and rule at once; no API keys
+- **Layout**: `skills/rules-distill/SKILL.md` (single file, no scripts in the skill payload)
 - **Phases**: 3 — Inventory, Cross-read & Verdict, User Review
-- **Inventory mechanism**: Glob over `~/.claude/skills/*/SKILL.md` + `learned/*.md`; reads every `~/.claude/rules/**/*.md` in full
+- **Inventory mechanism**: Glob over `~/.claude/skills/*/SKILL.md`; reads every `~/.claude/rules/**/*.md` in full
 - **Evaluation mechanism**: fully inline — all skills and all rules read into one context; no subagent batching
 - **Verdicts**: Append, Revise, New Section, New File, Already Covered, Too Specific
-- **Filter**: 2+ skill evidence, actionable behavior, clear violation risk
-- **Output**: JSON candidates — principle, evidence, verdict, target, confidence, draft
-- **Ledger**: `results.json` — lean `{distilled_at, candidates}`, updated inline, per-installation (gitignored)
-- **Approval gate**: never edits rules automatically — every candidate requires user approval
-- **Real example**: 56 skills, 22 rule files, 4 candidates, 2 applied
-- **Siblings**: `llms-txt-writer`, `skill-comply`, `context-sync`, `search-first`, `skill-stocktake`, `learn-eval`
+- **Candidate tests**: six — environment-specific, not already done by the model, not a procedure, actionable behavior change, clear violation risk, not already in rules
+- **Recurrence**: count of skills repeating a principle, reported as evidence, not a gate
+- **Output**: summary table (`# | Principle | Verdict | Target | Confidence`), then per-candidate evidence, violation risk and draft text
+- **Ledger**: `~/.claude/skills/rules-distill/results.json` — lean `{distilled_at, candidates}` with principle, verdict, target, evidence, status (applied / skipped), updated inline, per-installation (gitignored)
+- **Approval gate**: never edits rules automatically — candidates are confirmed one at a time with `[y/n/skip]`; bulk approval is banned
+- **Siblings**: `akc-cycle`, `rules-stocktake`, `learn-eval`, `skill-stocktake`, `skill-comply`, `context-sync`, `search-first`, `llms-txt-writer`
 - **Standard**: agentskills.io/specification
 
 ## Prior Research References
 
 | Short name | Reference | Used for |
 |---|---|---|
-| Hunt & Thomas | The Pragmatic Programmer (1999), "Don't Repeat Yourself" | Foundation for the 2+ skill evidence criterion |
+| Hunt & Thomas | The Pragmatic Programmer (1999), "Don't Repeat Yourself" | Background for the recurrence count, which the skill reports as evidence rather than a gate |
 | Spolsky | Spolsky, J. (2000). Things You Should Never Do | Source of the Revise-vs-Rewrite distinction |
 | Nygard | Nygard, M. (2011). Documenting Architecture Decisions | Format for rule files this skill emits drafts toward |
 | Skill spec | agentskills.io/specification | Defines the Markdown + frontmatter format this skill follows |
@@ -39,7 +42,7 @@ This document is the self-contained AI reference for `rules-distill` (shimo4228,
 
 ## What is rules-distill?
 
-rules-distill is a slash command that promotes recurring skill principles into rule files. It refers to the observation that some principles appear in many skills and would be better expressed once as a rule. The skill is a kind of anti-duplication tool. No rule file is auto-modified — every output candidate requires user approval before any edit lands. Pure additive.
+rules-distill is a slash command that promotes principles found in skills into the always-loaded rule files under `~/.claude/rules/`. It refers to the observation that rules load in every session, so what gets in matters more than how much: a rule earns its place only when it states a fact, a wiring or a trap specific to this environment that the current model would not handle by default. General advice repeated across many skills fails, because a written copy freezes an older default. No rule file is auto-modified — every candidate requires user approval before any edit lands.
 
 ## What are the six verdict types?
 
@@ -47,11 +50,11 @@ The six verdicts are Append (add to an existing section), Revise (existing conte
 
 ## What are the three workflow phases?
 
-The three phases are Inventory (Glob enumerates skills and reads all rule files), Cross-read & Verdict (the skill reads all skills plus the full rules text in one context and emits candidates), and User Review (summary table, Approve / Modify / Skip per candidate, apply). Phase 2 is the load-bearing one, and it runs in a single context rather than batched subagents.
+The three phases are Inventory (Glob enumerates skills and reads all rule files), Cross-read & Verdict (the skill reads all skills plus the full rules text in one context and emits candidates), and User Review (summary table, then one candidate at a time with evidence, violation risk and draft, answered `[y/n/skip]`; bulk approval is banned). Phase 2 is the load-bearing one, and it runs in a single context rather than batched subagents.
 
 ## What is the anti-abstraction safeguard?
 
-The safeguard refers to a 3-layer filter applied during candidate extraction. A principle is included only when all three layers hold: it appears in 2+ skills, it is actionable as a do-X or don't-do-Y rule, and it carries a clear violation risk statable in one sentence. The filter is a deliberate counterweight to the LLM's tendency to abstract every observation into a rule.
+The safeguard refers to six tests applied during candidate extraction. A principle is included only when all six hold: it is environment-specific (a fact, wiring or trap of this machine, harness or accounts), the model does not already do it, it is not a procedure (steps belong in a skill), it is actionable as a do-X or don't-do-Y rule, it carries a clear violation risk statable in one sentence, and it is not already in rules. Recurrence across skills is reported as evidence, not a gate, so a one-off environment trap can pass. The tests counter the LLM's tendency to abstract every observation into a rule.
 
 ## What is the "Glob = exhaustive collection, LLM = judgment" principle?
 
@@ -59,7 +62,7 @@ The principle refers to splitting the workflow into a deterministic part and a j
 
 ## Why no batching, and why was the cross-batch merge removed?
 
-Earlier versions grouped skills into thematic clusters, analyzed each cluster in a separate subagent, then ran a cross-batch merge. That merge existed only to recover the "appears in 2+ skills" signal that batching broke — a principle found in one skill per batch but two skills overall had to be reassembled afterward. With a large context window the whole corpus fits in one context, so the 2+ skills test is exact from the start and no merge step is needed. Removing batching both simplifies the skill and makes the core criterion more accurate.
+Earlier versions grouped skills into thematic clusters, analyzed each cluster in a separate subagent, then ran a cross-batch merge. That merge existed only to recover the "appears in 2+ skills" signal that batching broke — a principle found in one skill per batch but two skills overall had to be reassembled afterward. With a large context window the whole corpus fits in one context, so the recurrence count is exact from the start and no merge step is needed, and seeing the full rules text next to all skills makes the "not already in rules" test reliable. Removing batching both simplifies the skill and makes its judgments more accurate.
 
 ## When should I NOT use this skill?
 
@@ -67,8 +70,8 @@ Not on a fresh installation with fewer than ten skills — the cost of evaluatio
 
 ## How does this skill relate to skill auditing?
 
-Skill auditing tools (e.g. skill-stocktake) audit per-skill quality, while this skill promotes proven cross-skill principles into the next layer. It is an upstream complement — auditors clean the skill layer, this skill elevates patterns from that clean layer. Together they cover both within-layer audit and cross-layer promotion in the self-improvement loop.
+Skill auditing tools (e.g. skill-stocktake) audit per-skill quality, while this skill promotes environment-specific principles found in skills into the rules layer. Run stocktake first, then distill what survives. rules-stocktake covers the reverse direction over the same boundary: it audits the rules this skill produces and demotes back what stopped earning its always-loaded slot. Together they cover within-layer audit and cross-layer promotion and demotion.
 
 ## Who is shimo4228?
 
-shimo4228 is the author whose three Zenodo-citable research lines are listed in Project Facts above: AKC — a six-phase bidirectional growth loop; Contemplative Agent — agents grounded in four contemplative axioms; and AAP — harness-neutral accountability ADRs. This skill is scaffolding for the **Promote** phase of AKC.
+shimo4228 is the author; the hub (https://github.com/shimo4228/shimo4228) lists five practice lines, including the three agent-design lines listed in Project Facts above: AKC — a six-phase bidirectional growth loop; Contemplative Agent — agents grounded in four contemplative axioms; and AAP — harness-neutral accountability ADRs. This skill is scaffolding for the **Promote** phase of AKC.

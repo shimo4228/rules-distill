@@ -2,47 +2,54 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shimo4228/rules-distill)
 
-An [Agent Skill](https://agentskills.io/specification) that scans your installed skills, extracts cross-cutting principles appearing in **2+ skills**, and distills them into rules — appending to existing rule files, revising outdated content, or creating new ones.
+An [Agent Skill](https://agentskills.io/specification) for Claude Code that scans your installed skills, finds principles that belong in the **always-loaded rules layer** (the rule files under `~/.claude/rules/` that Claude Code loads into every session), and drafts them as rules: appending to existing rule files, revising outdated content, or creating new ones. It never edits a rule until you confirm that candidate.
 
-The final piece of the knowledge lifecycle:
+Because rules load in every session, what gets in matters more than how much. A candidate must be a fact, a wiring or a trap specific to your machine, harness or accounts; general advice the model already follows is turned away however many skills repeat it. It is for people who keep their own skills and rules; run it every so often, for example monthly or after installing new skills.
 
-```
-search-first → skill-stocktake → learn-eval → rules-distill
-(research)     (quality audit)   (extraction)  (principle promotion)
-```
+It is the Promote phase of the author's [Agent Knowledge Cycle](https://github.com/shimo4228/agent-knowledge-cycle) (AKC), a human-gated cycle that turns a coding agent's repeated experience into skills and rules; this skill runs on its own without the rest of the cycle. The author's other work is listed under [More from the author](#more-from-the-author).
 
 ## Install
 
-### Claude Code
-
 ```bash
 git clone https://github.com/shimo4228/rules-distill
+mkdir -p ~/.claude/skills
 cp -r rules-distill/skills/rules-distill ~/.claude/skills/rules-distill
 ```
 
-Invoked via the `/rules-distill` slash command — discovery is driven by `SKILL.md` frontmatter (`user-invocable: true`), so no separate `commands/` copy is needed.
+Run it by typing `/rules-distill`. Claude does not start it on its own: the skill sets `disable-model-invocation: true`, so it stays out of every session's context until you call it.
+
+It needs Claude Code with the **Glob**, **Read**, **Edit** and **Write** tools, plus **Bash** for the one `date -u` call that timestamps the ledger, and enough context to hold every skill and rule at once; the skill itself runs no scripts or subagents and needs no API keys. It reads skills from `~/.claude/skills/*/SKILL.md` and rules from `~/.claude/rules/`, and keeps a ledger of each candidate's verdict and whether you applied or skipped it at `~/.claude/skills/rules-distill/results.json`. The skill folder `skills/rules-distill/` holds only `SKILL.md`, so to update, copy that one file over (`cp rules-distill/skills/rules-distill/SKILL.md ~/.claude/skills/rules-distill/`) and the ledger stays.
+
+If you want the whole cycle, install the [akc-cycle](https://github.com/shimo4228/akc-cycle) Claude Code plugin instead: it ships this same skill with the other skills of the cycle, called `/akc-cycle:rules-distill` there. Both copies come from one source in the author's harness; this repository is synced one way from it, so between syncs it can trail the plugin.
+
+```
+/plugin marketplace add shimo4228/akc-cycle
+/plugin install akc-cycle@akc-cycle
+```
 
 ## How It Works
 
-No scan scripts and no subagent batching — with a large context window the skill reads every skill and every rule into one context. That single-context view is what makes the "appears in 2+ skills" test exact (the old version needed a cross-batch merge step purely to recover that signal after batching broke it).
+The skill reads every skill and every rule into one context. Seeing the full rules text next to all skills is what makes the last test below ("not already in rules") reliable, so the design assumes your skills and rules fit in one context together; it does not split them into batches.
 
 ### Phase 1: Inventory (Glob, exhaustive)
 
-Glob enumerates skill definition files (`~/.claude/skills/*/SKILL.md` + `learned/*.md`) and reads every rule file in full. The rules corpus is small (~800 lines), so no grep pre-filter is needed. Dependency markdown under `.venv` / `.pytest_cache` is excluded structurally because Glob targets only skill files.
+Claude Code's Glob tool enumerates skill definition files (`~/.claude/skills/*/SKILL.md`) and the skill reads every rule file under `~/.claude/rules/` in full. It shows the counts before the analysis.
 
-### Phase 2: Cross-read, Match & Verdict (holistic)
+### Phase 2: Cross-read, Match & Verdict
 
-The skill cross-reads all skills and the full rules text in a single inline pass.
+**A principle is a candidate only if all of these hold:**
+1. **Environment-specific**: a fact, a wiring or a trap particular to this machine, harness or set of accounts. A general engineering principle is not a candidate no matter how many skills repeat it.
+2. **The model does not already do it**: if the current model handles it natively, a written rule freezes an older default and competes with the newer one.
+3. **Not a procedure**: steps and workflows belong in a skill.
+4. **Actionable behavior change**: expressible as "do X" / "don't do Y".
+5. **Clear violation risk**: what goes wrong if it is ignored, in one sentence.
+6. **Not already in rules**, including the same idea in different words.
 
-**Extraction criteria** (all must be true):
-1. Appears in 2+ skills
-2. Actionable behavior change ("do X" / "don't do Y")
-3. Clear violation risk (1 sentence)
-4. Not already in rules (even if worded differently)
+How many skills repeat a principle (its recurrence) is reported as evidence, but it is not one of the six tests: a one-off environment trap can pass with a recurrence of 1.
 
 ### Phase 3: User Review & Execution
 
-Candidates are presented in a summary table, then confirmed **one at a time** — each shows its evidence, violation risk, and draft text before asking `[y/n/skip]`; bulk approval is banned and the user can stop at any point. **Never modifies rules automatically** — rules load every session, so a bad rule has outsized blast radius.
+Candidates are presented in a summary table, then confirmed **one at a time**: each shows its evidence, violation risk, and draft text before asking `[y/n/skip]`. When a principle has a detailed procedure in a skill, the draft rule points back to that skill instead of copying the steps (as ``skill: `name` ``, the pointer form the author's rules use); the example below is a bare fact, so it has no pointer. Bulk approval is banned and the user can stop at any point. The skill **never modifies rules automatically**, because rules load every session, so a bad rule has outsized blast radius.
 
 ## Verdict Types
 
@@ -55,59 +62,50 @@ Candidates are presented in a summary table, then confirmed **one at a time** �
 | **Already Covered** | Sufficiently covered in existing rules |
 | **Too Specific** | Should remain at the skill level |
 
-## Design Principles
-
-- **What, not How**: Extract principles (rules) only. Code examples stay in skills.
-- **Link back**: Drafts include `See skill: [name]` references.
-- **Glob = exhaustive collection, LLM = judgment**: Glob guarantees the inventory is complete; the single-context cross-read guarantees contextual understanding.
-- **Anti-abstraction safeguard**: 3-layer filter (2+ skills, actionable behavior test, violation risk) prevents overly abstract principles from entering rules.
-
 ## Example Output
 
-```
-Rules Distillation Report
-
-Skills scanned: 56 | Rules: 22 files | Candidates: 4
-
-| # | Principle                                          | Verdict     | Target          |
-|---|----------------------------------------------------|-------------|-----------------|
-| 1 | LLM output: normalize, type-check before reuse     | New Section | coding-style.md |
-| 2 | Define explicit stop conditions for iteration loops | New Section | coding-style.md |
-| 3 | Compact context at phase boundaries, not mid-task   | Append      | performance.md  |
-| 4 | Separate business logic from I/O framework types    | New Section | patterns.md     |
-```
-
-## Related Skills
-
-All six AKC phases as standalone Claude Code skills:
-
-| Skill | AKC Phase | Role |
-|-------|-----------|------|
-| [search-first](https://github.com/shimo4228/search-first) | Research | Find existing solutions before writing custom code |
-| [learn-eval](https://github.com/shimo4228/learn-eval) | Extract | Quality-gated extraction of session patterns into skills |
-| [skill-stocktake](https://github.com/shimo4228/skill-stocktake) | Curate | Audit accumulated skills for quality and overlap |
-| **rules-distill** | **Promote** | **Distill cross-skill principles into rule files** |
-| [skill-comply](https://github.com/shimo4228/skill-comply) | Measure | Test whether agents actually follow their skills and rules |
-| [context-sync](https://github.com/shimo4228/context-sync) | Maintain | Audit docs for role overlaps, stale content, and missing ADRs |
-
-Together, these form a complete self-improvement loop for AI agents:
+A run first shows how many skills and rule files it read, then a summary table (`# | Principle | Verdict | Target | Confidence`), then walks the candidates one at a time. Below is one candidate with the evidence for tests 1 to 3 and the violation risk: the worked example the skill itself carries, from the author's own account, not a run on a typical setup.
 
 ```
-Research → Extract → Curate → Promote → Measure → Maintain → (back to Research)
-   │          │         │         │          │          │
-search-    learn-     skill-    rules-     skill-     context-
- first      eval     stocktake  distill    comply      sync
+New Section in rules/common/debugging.md:
+"If rate limits fire repeatedly during bulk writes to an external platform, treat them as a
+policy signal, not a transient error, and stop the burst. Do not push through with backoff; report to a human."
+
+Test 1 (environment-specific): an event that actually happened on this author's account. On 2026-07-16,
+  continuing with backoff resulted in an indefinite account block + deletion of all created content. Not general
+  HTTP 429 etiquette, but a stop condition specific to this operation
+Test 2 (the model does not already do it): the model's default retries 429 as transient.
+  The rule is needed to override that default
+Test 3 (not a procedure): not a procedure but a declaration of fact: "repeated rate limits = policy signal"
+Violation risk: pushing through loses the whole account (proven, unrecoverable)
+Recurrence: 1 skill
 ```
 
-## Requirements
+## More from the author
 
-- Claude Code with the **Glob**, **Read**, and **Edit** tools (the analysis runs in one main context — no subagents required).
-- Optional: `jq` / `python3` for the inline ledger one-liner.
-
-## About this skill
-
-This skill implements the **Promote** phase of the [Agent Knowledge Cycle (AKC)](https://github.com/shimo4228/agent-knowledge-cycle) — a Zenodo-citable six-phase bidirectional growth loop ([DOI 10.5281/zenodo.19200726](https://doi.org/10.5281/zenodo.19200726)) for sustaining intent alignment between an AI agent and its operator over time. AKC is one of three research lines by [@shimo4228](https://github.com/shimo4228), alongside [Contemplative Agent](https://github.com/shimo4228/contemplative-agent) ([DOI 10.5281/zenodo.19212118](https://doi.org/10.5281/zenodo.19212118)) — autonomous agents grounded in four contemplative axioms — and [Agent Attribution Practice (AAP)](https://github.com/shimo4228/agent-attribution-practice) ([DOI 10.5281/zenodo.19652013](https://doi.org/10.5281/zenodo.19652013)) — harness-neutral ADRs on accountability distribution.
+- **[Not Reasoning, Not Tools — What If the Essence of AI Agents Is Memory?](https://dev.to/shimo4228/not-reasoning-not-tools-what-if-the-essence-of-ai-agents-is-memory-4k4n)** ([日本語](https://zenn.dev/shimo4228/articles/agent-essence-is-memory)): why the author built rules-distill to move principles from skills into rules, and how it closed a loop with learn-eval and the audit skills.
+- **[Where to Put a Coding Agent's Knowledge — and How to Make It Stick](https://dev.to/shimo4228/where-to-put-a-coding-agents-knowledge-and-how-to-make-it-stick-161g)** ([日本語](https://zenn.dev/shimo4228/articles/coding-agent-memory-architecture)): which knowledge belongs in always-loaded rules, which in skills, and how often an agent actually follows each, as measured.
+- **[akc-cycle](https://github.com/shimo4228/akc-cycle)**: installs this skill together with the rest of the cycle as one Claude Code plugin.
+- **[Agent Knowledge Cycle](https://github.com/shimo4228/agent-knowledge-cycle)**: the reasoning behind each phase of the cycle, Promote among them, recorded as dated design decisions.
+- **[rules-stocktake](https://github.com/shimo4228/rules-stocktake)**: the reverse direction; it audits the rules you already load for what they cost in every session and proposes demoting or dissolving the ones that stopped earning their place.
+- **[learn-eval](https://github.com/shimo4228/learn-eval)**: an earlier phase, which keeps what a session taught by saving it where a future session will find it, often in the skills this skill later reads.
+- **[shimo4228](https://github.com/shimo4228/shimo4228)**: the author's hub, with AKC next to the other long-running practice lines and their DOIs.
 
 ## License
 
 MIT
+
+<details>
+<summary>For tools and AI assistants</summary>
+
+rules-distill is an Agent Skill for Claude Code that reads all installed skills and all always-loaded rules in one context, finds principles that belong in the rules layer, and drafts them as rule edits, for people who maintain their own `~/.claude/rules/` and want the environment-specific principles in their skills promoted with evidence instead of by hand. It never writes a rule without a one-at-a-time confirmation.
+
+It exists because rules load in every session, so what gets in matters more than how much. A rule earns that place only when it states a fact, a wiring or a trap specific to this environment that the current model would not handle by default; general advice repeated across many skills fails, because a written copy freezes an older default and competes with the newer one. How many skills repeat a principle is evidence, not a gate.
+
+Canonical facts: MIT license; the skill payload (`skills/rules-distill/`) is a single `SKILL.md` with no scripts; maintained by one author (@shimo4228). Status: active, synced one way from the author's Claude Code harness by `scripts/sync-from-local.sh` (it never commits), and also shipped in the akc-cycle plugin, so this repository can trail the plugin between syncs. Requirements: Claude Code with Glob, Read, Edit and Write, plus Bash for the ledger's `date -u` timestamp, and enough context to hold every skill and rule at once; no keys. It runs only when called as `/rules-distill` (`disable-model-invocation: true`), edits files under `~/.claude/rules/` only after each confirmation, and writes a ledger to `~/.claude/skills/rules-distill/results.json` with each candidate's principle, verdict, target, evidence and status (applied or skipped).
+
+Example: a run reports the counts of skills and rule files scanned, then a summary table (`# | Principle | Verdict | Target | Confidence`), then walks each candidate. Each gets one of six verdicts: Append, Revise, New Section, New File, Already Covered, or Too Specific. A candidate must pass six tests: environment-specific, not already done by the model, not a procedure, an actionable behavior change, a one-sentence violation risk, and not already in rules.
+
+Links: [skills/rules-distill/SKILL.md](skills/rules-distill/SKILL.md) is the skill itself; [CHANGELOG.md](CHANGELOG.md) holds the release history; [llms.txt](llms.txt) and [llms-full.txt](llms-full.txt) are the machine-readable summary and reference. The skill implements the Promote phase of the [Agent Knowledge Cycle (AKC)](https://github.com/shimo4228/agent-knowledge-cycle), concept DOI [10.5281/zenodo.19200726](https://doi.org/10.5281/zenodo.19200726); cite AKC by that DOI. The installable form of the whole cycle is [akc-cycle](https://github.com/shimo4228/akc-cycle).
+
+</details>
